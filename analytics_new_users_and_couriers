@@ -1,18 +1,102 @@
-with first_user_id as (SELECT min_date as date, count(user_id) as new_users FROM (SELECT user_id, min(date ) as min_date FROM (
-SELECT user_id, time::date as date
-FROM user_actions) tt1
-group by user_id) tt2
-group by min_date),
-first_couriers_id as (SELECT min_date as date, count(courier_id) as new_couriers FROM (SELECT courier_id, min(date ) as min_date FROM (
-SELECT courier_id, time::date as date
-FROM courier_actions) tt3
-group by courier_id) tt4
-group by min_date)
-
-SELECT date, new_users, new_couriers, total_users, total_couriers, round(new_users_change,2) as  new_users_change, round(new_couriers_change,2) as new_couriers_change, round((total_users::decimal/lag(total_users)  over(ORDER BY date) -1)*100,2) as total_users_growth, round((total_couriers::decimal/lag(total_couriers)  over(ORDER BY date) -1)*100,2) as total_couriers_growth
-FROM ( SELECT date, new_users, new_couriers, sum(new_users) over(ORDER BY date)::int as total_users, sum(new_couriers) over(ORDER BY date)::int as total_couriers, (new_users::decimal/lag(new_users)  over(ORDER BY date) -1)*100 as new_users_change,
-(new_couriers::decimal/lag(new_couriers)  over(ORDER BY date) -1)*100 as new_couriers_change
-FROM first_user_id
-left join
-first_couriers_id
-using (date)) t1
+with first_user_id as (
+  SELECT
+    min_date as date,
+    count(user_id) as new_users
+  FROM
+    (
+      SELECT
+        user_id,
+        min(date) as min_date
+      FROM
+        (
+          SELECT
+            user_id,
+            time :: date as date
+          FROM
+            user_actions
+        ) tt1
+      group by
+        user_id
+    ) tt2
+  group by
+    min_date
+),
+first_couriers_id as (
+  SELECT
+    min_date as date,
+    count(courier_id) as new_couriers
+  FROM
+    (
+      SELECT
+        courier_id,
+        min(date) as min_date
+      FROM
+        (
+          SELECT
+            courier_id,
+            time :: date as date
+          FROM
+            courier_actions
+        ) tt3
+      group by
+        courier_id
+    ) tt4
+  group by
+    min_date
+)
+SELECT
+  date,
+  new_users,
+  new_couriers,
+  total_users,
+  total_couriers,
+  round(new_users_change, 2) as new_users_change,
+  round(new_couriers_change, 2) as new_couriers_change,
+  round(
+    (
+      total_users :: decimal / lag(total_users) over(
+        ORDER BY
+          date
+      ) -1
+    ) * 100,
+    2
+  ) as total_users_growth,
+  round(
+    (
+      total_couriers :: decimal / lag(total_couriers) over(
+        ORDER BY
+          date
+      ) -1
+    ) * 100,
+    2
+  ) as total_couriers_growth
+FROM
+  (
+    SELECT
+      date,
+      new_users,
+      new_couriers,
+      sum(new_users) over(
+        ORDER BY
+          date
+      ) :: int as total_users,
+      sum(new_couriers) over(
+        ORDER BY
+          date
+      ) :: int as total_couriers,
+      (
+        new_users :: decimal / lag(new_users) over(
+          ORDER BY
+            date
+        ) -1
+      ) * 100 as new_users_change,
+      (
+        new_couriers :: decimal / lag(new_couriers) over(
+          ORDER BY
+            date
+        ) -1
+      ) * 100 as new_couriers_change
+    FROM
+      first_user_id
+      left join first_couriers_id using (date)
+  ) t1
